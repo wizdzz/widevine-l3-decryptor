@@ -57,6 +57,7 @@ WidevineCrypto.decryptContentKey = async function(licenseRequest, licenseRespons
     licenseResponse = SignedMessage.read(new Pbf(licenseResponse));
 
     if (licenseRequest.type != SignedMessage.MessageType.LICENSE_REQUEST.value) return;
+    if (licenseResponse.type != SignedMessage.MessageType.LICENSE.value) return;
 
     license = License.read(new Pbf(licenseResponse.msg));
     

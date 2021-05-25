@@ -4,9 +4,6 @@
  * Most of the code here was borrowed from https://github.com/google/eme_logger/blob/master/eme_listeners.js
  */
 
- var lastReceivedLicenseRequest = null;
- var lastReceivedLicenseResponse = null;
-
  /** Set up the EME listeners. */
 function startEMEInterception() 
 {
@@ -14,6 +11,7 @@ function startEMEInterception()
   listener.setUpListeners();
 }
 
+var MediaKeySessionList = {};
  /**
  * Gets called whenever an EME method is getting called or an EME event fires
  */
@@ -27,15 +25,24 @@ EmeInterception.onOperation = function(operationType, args)
     else if (operationType == "MessageEvent")
     {
         var licenseRequest = args.message;
-        lastReceivedLicenseRequest = licenseRequest;
+
+        var licenseRequestDecode = SignedMessage.read(new Pbf(licenseRequest));
+        if (licenseRequestDecode.type = SignedMessage.MessageType.LICENSE_REQUEST.value){
+            MediaKeySessionList[args.target.sessionId] = {'licenseRequest': licenseRequest};
+        }
     }
     else if (operationType == "UpdateCall")
     {
         var licenseResponse = args[0];
-        lastReceivedLicenseResponse = licenseResponse;
 
-        // OK, let's try to decrypt it, assuming the response correlates to the request
-        WidevineCrypto.decryptContentKey(lastReceivedLicenseRequest, lastReceivedLicenseResponse);
+        var licenseResponseDecode = SignedMessage.read(new Pbf(licenseResponse));
+        if (licenseResponseDecode.type == SignedMessage.MessageType.LICENSE.value){
+            MediaKeySessionList[args.target.sessionId].licenseResponse = licenseResponse;
+        }
+
+        // OK, let's try to decrypt it, assuming the response correlates to the request, 
+        //   it would be wrong when occour twice drm key requests, do not do that
+        WidevineCrypto.decryptContentKey(MediaKeySessionList[args.target.sessionId].licenseRequest, MediaKeySessionList[args.target.sessionId].licenseResponse);
     }
 };
 
